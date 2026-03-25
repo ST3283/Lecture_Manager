@@ -38,6 +38,7 @@ import java.util.Locale;
 
 public class LecturesActivity extends AppCompatActivity implements View.OnClickListener {
 
+    private final static String DB_URL = "https://lecture-manager-356ad-default-rtdb.europe-west1.firebasedatabase.app/";
     private RecyclerView rvLectures;
     private FloatingActionButton fabAddLecture;
     DatabaseReference groupsRef , lecturersRef;
@@ -56,6 +57,7 @@ public class LecturesActivity extends AppCompatActivity implements View.OnClickL
     private ArrayList<Lecturer> lecturers = new ArrayList<>();
     private boolean groupsLoaded = false;
     private boolean lecturersLoaded = false;
+    private static final FirebaseDatabase dbref = FirebaseDatabase.getInstance(DB_URL);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -70,9 +72,9 @@ public class LecturesActivity extends AppCompatActivity implements View.OnClickL
         toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        lecturesRef = FirebaseDatabase.getInstance().getReference("lectures");
-        groupsRef = FirebaseDatabase.getInstance().getReference("groups");
-        lecturersRef = FirebaseDatabase.getInstance().getReference("lecturers");
+        lecturesRef = dbref.getReference("lectures");
+        groupsRef = dbref.getReference("groups");
+        lecturersRef = dbref.getReference("lecturers");
 
         rvLectures = findViewById(R.id.rvLectures);
         rvLectures.setLayoutManager(new LinearLayoutManager(this));
@@ -80,10 +82,6 @@ public class LecturesActivity extends AppCompatActivity implements View.OnClickL
         fabAddLecture = findViewById(R.id.fabAddLecture);
         fabAddLecture.setOnClickListener(this);
         fabAddLecture.setEnabled(false);
-
-
-
-
 
 
         adapter = new LecturesAdapter(this, lectures,
