@@ -97,7 +97,8 @@ public class LecturesActivity extends AppCompatActivity implements View.OnClickL
                         showEditLectureDialog(lecture);
                     }
                 },
-                groupsRef);
+                groupsRef,
+                lecturersRef);
         rvLectures.setAdapter(adapter);
 
         groupsRef.get()

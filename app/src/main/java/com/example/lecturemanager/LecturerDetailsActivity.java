@@ -90,7 +90,8 @@ public class LecturerDetailsActivity extends AppCompatActivity implements View.O
                         handleLectureLongClick(lecture);
                     }
                 },
-                groupRef);
+                groupRef,
+                lectureRef);
         rvLecturerLectures.setLayoutManager(new LinearLayoutManager(this));
         rvLecturerLectures.setAdapter(adapter);
 

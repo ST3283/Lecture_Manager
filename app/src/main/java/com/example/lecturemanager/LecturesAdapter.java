@@ -13,8 +13,11 @@ import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseReference;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 public class LecturesAdapter
@@ -22,9 +25,11 @@ public class LecturesAdapter
 
     private ArrayList<Lecture> lectures;
     private Map<String, Group> groupsMap;
-     OnLectureClickListener clickListener;
+    private Map<String, Lecturer> lecturersMap;
+
+    OnLectureClickListener clickListener;
     private OnLectureLongClickListener longClickListener;
-    DatabaseReference groupsRef;
+    DatabaseReference groupsRef , lecturersRef;
     private Context context;
 
     public interface OnLectureClickListener {
@@ -38,12 +43,14 @@ public class LecturesAdapter
                             ArrayList<Lecture> lectures,
                            OnLectureClickListener clickListener,
                            OnLectureLongClickListener longClickListener ,
-                           DatabaseReference groupsRef) {
+                           DatabaseReference groupsRef,
+                           DatabaseReference lecturersRef) {
         this.lectures = lectures;
         this.clickListener = clickListener;
         this.longClickListener = longClickListener;
         this.groupsRef = groupsRef;
         this.context = context;
+        this.lecturersRef = lecturersRef;
 
         groupsMap = new HashMap<>();
         groupsRef.get().addOnSuccessListener(new OnSuccessListener<DataSnapshot>() {
@@ -58,6 +65,21 @@ public class LecturesAdapter
                 notifyDataSetChanged();
         }
     });
+
+        lecturersMap = new HashMap<>();
+        lecturersRef.get().addOnSuccessListener(new OnSuccessListener<DataSnapshot>() {
+            @Override
+            public void onSuccess(DataSnapshot lecturerSnapshot) {
+                for (DataSnapshot lecturerSnap: lecturerSnapshot.getChildren()) {
+                    Lecturer lecturer = lecturerSnap.getValue(Lecturer.class);
+                    if (lecturer == null) continue;
+                    lecturer.setId(lecturerSnap.getKey());
+                    lecturersMap.put(lecturer.getId(), lecturer);
+                }
+                notifyDataSetChanged();
+            }
+        });
+
     }
 
     @NonNull
@@ -79,9 +101,25 @@ public class LecturesAdapter
             holder.tvGroupName.setText("קבוצה לא נמצאה");
         }
 
+        Lecturer l = lecturersMap.get(lecture.getLecturerId());
+        if (l != null) {
+            holder.tvLecturer.setText(l.getName());
+        } else {
+            holder.tvLecturer.setText("מרצה לא נמצא");
+        }
+
+
         holder.tvTitle.setText(lecture.getTitle());
-        holder.tvTitle.setText(lecture.getTitle());
-//        holder.tvDate.setText(lecture.getDate()); //TODO Date
+
+        Date lectureDate = lecture.getDate();
+
+        if (lectureDate != null) {
+            SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault());
+            holder.tvDate.setText(sdf.format(lectureDate));
+        } else {
+            holder.tvDate.setText("ללא תאריך");
+        }
+
 
         holder.itemView.setOnClickListener(new View.OnClickListener() {
             @Override

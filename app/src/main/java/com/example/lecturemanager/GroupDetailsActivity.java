@@ -92,7 +92,8 @@ public class GroupDetailsActivity extends AppCompatActivity implements View.OnCl
                         handleLectureLongClick(lecture);
                     }
                 },
-        groupRef);
+        groupRef,
+                lectureRef);
         // TODO link the lectures list to the adapter and the adapter to the recyclerview
         // TODO FAB should add a lecture
         RecyclerView rvLectures = findViewById(R.id.rvLectures);
