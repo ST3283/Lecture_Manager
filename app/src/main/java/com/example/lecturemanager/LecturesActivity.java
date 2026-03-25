@@ -85,6 +85,7 @@ public class LecturesActivity extends AppCompatActivity implements View.OnClickL
 
 
 
+
         adapter = new LecturesAdapter(this, lectures,
                 new LecturesAdapter.OnLectureClickListener() {
                     @Override
@@ -100,7 +101,6 @@ public class LecturesActivity extends AppCompatActivity implements View.OnClickL
                 groupsRef,
                 lecturersRef);
         rvLectures.setAdapter(adapter);
-
         groupsRef.get()
                 .addOnSuccessListener(new OnSuccessListener<DataSnapshot>() {
                     @Override
