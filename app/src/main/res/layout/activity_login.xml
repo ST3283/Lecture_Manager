@@ -23,7 +23,7 @@
         android:layout_weight="3"
         android:layout_marginBottom="16dp"
         android:background="@drawable/edittext_background"
-        android:hint="User Name"
+        android:hint="Your email"
         android:inputType="textPersonName"
         android:padding="16dp"
         android:textSize="48sp" />
