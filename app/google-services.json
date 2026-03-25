@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "420845329218",
+    "project_id": "lecture-manager-356ad",
+    "storage_bucket": "lecture-manager-356ad.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:420845329218:android:bb3259b716f3c1413846db",
+        "android_client_info": {
+          "package_name": "com.example.lecturemanager"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDDmz1bPifrYN4HZS8tu4_bSLC0CXjkpbI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

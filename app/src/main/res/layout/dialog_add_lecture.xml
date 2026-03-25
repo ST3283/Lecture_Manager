@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <EditText
+        android:id="@+id/etLectureTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="שם ההרצאה" />
+
+    <EditText
+        android:id="@+id/etLectureDate"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="תאריך ההרצאה"
+        android:ems="10"
+        android:focusable="false"
+        android:clickable="true"
+        android:inputType="date" />
+
+    <Spinner
+        android:id="@+id/spLectureGroup"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="קבוצת ההרצאה"
+        android:focusable="false"
+        android:clickable="true"/>
+
+
+
+
+    <Spinner
+        android:id="@+id/spLecturerName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="שם המרצה" />
+
+
+
+    <Button
+        android:id="@+id/btnAddLecture"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="הוסף הרצאה" />
+
+</LinearLayout>

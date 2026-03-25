@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F5F5F5"
+    tools:context=".LoginActivity">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="32dp">
+
+        <Space
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"/>
+
+        <EditText
+            android:id="@+id/etName"
+            android:layout_width="496dp"
+            android:layout_height="141dp"
+            android:layout_marginBottom="16dp"
+            android:background="@drawable/edittext_background"
+            android:hint="User Name"
+            android:inputType="textPersonName"
+            android:padding="16dp"
+            android:textSize="48sp" />
+
+        <EditText
+            android:id="@+id/etPassword"
+            android:layout_width="510dp"
+            android:layout_height="125dp"
+            android:background="@drawable/edittext_background"
+            android:hint="Password"
+            android:inputType="textPassword"
+            android:padding="16dp"
+            android:textSize="48sp" />
+
+        <Space
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:weightSum="2"
+            android:layout_marginBottom="24dp">
+
+            <Button
+                android:id="@+id/btnSignUp"
+                android:layout_width="0dp"
+                android:layout_height="60dp"
+                android:layout_weight="1"
+                android:text="הרשמה"
+                android:textColor="#FFFFFF"
+                android:backgroundTint="#03A9F4"
+                android:textSize="18sp"
+                android:layout_marginEnd="8dp"
+                android:drawablePadding="8dp"/>
+
+            <Button
+                android:id="@+id/btnEnter"
+                android:layout_width="0dp"
+                android:layout_height="60dp"
+                android:layout_weight="1"
+                android:text="כניסה"
+                android:textColor="#FFFFFF"
+                android:backgroundTint="#4CAF50"
+                android:textSize="18sp"
+                android:layout_marginStart="8dp"
+                android:drawablePadding="8dp"/>
+        </LinearLayout>
+    </LinearLayout>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
