@@ -41,14 +41,15 @@ public class GroupDetailsActivity extends AppCompatActivity implements View.OnCl
     DatabaseReference lectureRef , groupRef , lecturerRef;
     private  LecturesAdapter adapter;
     private EditText  etLectureTitle  , etLectureDate;
-    private Spinner spLecturerName;
+    private Spinner spLecturerName  , spLectureGroup;
     private Calendar selectedDateTime = Calendar.getInstance();
     private android.app.AlertDialog addLectureDialog;
     private  Button btnAddLecture;
     private ArrayList<Lecturer> lecturers = new ArrayList<>();
+    private ArrayList<Group> groups = new ArrayList<>();
+    private  ArrayList<Lecture> lectures = new ArrayList<>();
 
 
-    List<Lecture> groupLectures = new ArrayList<Lecture>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -68,7 +69,6 @@ public class GroupDetailsActivity extends AppCompatActivity implements View.OnCl
       fabAddLecture = findViewById(R.id.fabAddLecture);
       fabAddLecture.setOnClickListener(this);
 
-        ArrayList<Lecture> lectures = new ArrayList<>();
 
         lecturerRef = FirebaseDatabase.getInstance().getReference("lecturers");
 
@@ -101,22 +101,30 @@ public class GroupDetailsActivity extends AppCompatActivity implements View.OnCl
 
 
         groupRef = FirebaseDatabase.getInstance().getReference("groups").child(groupId);
-        // TODO display group details
-        // TODO find lectures for this group
-        //TODO display rcLectures
-        lectureRef = FirebaseDatabase.getInstance().getReference("lectures");
-        lectureRef.get().addOnSuccessListener(new OnSuccessListener<DataSnapshot>() {
-            @Override
-            public void onSuccess(DataSnapshot lectureSnapshot) {
-                for (DataSnapshot lecSnap: lectureSnapshot.getChildren()) {
-                    Lecture lec = lecSnap.getValue(Lecture.class);
-                    if (lec.getGroupId().equals(groupId)) {
-                        lectures.add(lec);
+        groupRef.get()
+                .addOnSuccessListener(new OnSuccessListener<DataSnapshot>() {
+                    @Override
+                    public void onSuccess(DataSnapshot snapshot) {
+                        Group group = snapshot.getValue(Group.class);
+                        if (group != null) {
+                            group.setId(snapshot.getKey());
+                            groups.add(group);
+                        }
                     }
-                }
-                // adapter.notifyDatasetChange
-            }
-        });
+                })
+                .addOnFailureListener(e -> {
+                            Toast.makeText(GroupDetailsActivity.this,
+                                    "group failed: ",
+                                    Toast.LENGTH_LONG).show();
+                        });
+
+        // TODO display group details
+        //TODO display rcLectures
+
+        //this is the lectures that fit to the group id
+        lectureRef = FirebaseDatabase.getInstance().getReference("lectures");
+        loadGroupLectures();
+
         adapter = new LecturesAdapter(this,
                 lectures,
                 // לחיצה רגילה
@@ -140,6 +148,33 @@ public class GroupDetailsActivity extends AppCompatActivity implements View.OnCl
         rvLectures.setLayoutManager(new LinearLayoutManager(this));
         rvLectures.setAdapter(adapter);
 
+    }
+
+    private void loadGroupLectures() {
+        lectureRef.orderByChild("groupId").equalTo(groupId)
+                .get()
+                .addOnSuccessListener(new OnSuccessListener<DataSnapshot>() {
+                    @Override
+                    public void onSuccess(DataSnapshot snapshot) {
+                        lectures.clear();
+
+                        for (DataSnapshot lecSnap : snapshot.getChildren()) {
+                            Lecture lec = lecSnap.getValue(Lecture.class);
+
+                            if (lec != null) {
+                                lec.setLectureId(lecSnap.getKey());
+                                lectures.add(lec);
+                            }
+                        }
+
+                        adapter.notifyDataSetChanged();
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(GroupDetailsActivity.this,
+                            "שגיאה בטעינת ההרצאות",
+                            Toast.LENGTH_LONG).show();
+                });
     }
 
     private void handleLectureLongClick(Lecture lecture) {
@@ -199,12 +234,35 @@ public class GroupDetailsActivity extends AppCompatActivity implements View.OnCl
                  " lecturers: " + lecturers.size(),
                 Toast.LENGTH_LONG).show();
 
-        //TODO put the group name of the group you are in automatically
+
+        spLectureGroup = view.findViewById(R.id.spLectureGroup);
         spLecturerName = view.findViewById(R.id.spLecturerName);
         etLectureTitle = view.findViewById(R.id.etLectureTitle);
         etLectureDate = view.findViewById(R.id.etLectureDate);
 
 
+        ArrayList<String> groupNames = new ArrayList<>();
+        for (Group group : groups) {
+            groupNames.add(group.getName());
+        }
+
+        ArrayAdapter<String> groupsAdapter = new ArrayAdapter<>(
+                this,
+                android.R.layout.simple_spinner_item,
+                groupNames
+        );
+        groupsAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spLectureGroup.setAdapter(groupsAdapter);
+
+        for (int i = 0; i < groups.size(); i++) { //in order to choose automationically the group
+            if (groups.get(i).getId().equals(groupId)) {
+                spLectureGroup.setSelection(i);
+                break;
+            }
+        }
+
+        spLectureGroup.setEnabled(false);//shuts down the spinner so you can't change it
+        spLectureGroup.setClickable(false);
 
         ArrayList<String> lecturerNames = new ArrayList<>();
         for (Lecturer lecturer : lecturers) {
@@ -278,6 +336,8 @@ public class GroupDetailsActivity extends AppCompatActivity implements View.OnCl
                 .addOnSuccessListener(unused -> {
                     Toast.makeText(this, "הרצאה נוספה בהצלחה", Toast.LENGTH_LONG).show();
                     addLectureDialog.dismiss();
+
+                    loadGroupLectures();//update the rvLecture
                 })
                 .addOnFailureListener(e -> {
                     Toast.makeText(this, "שגיאה: " + e.getMessage(), Toast.LENGTH_LONG).show();
