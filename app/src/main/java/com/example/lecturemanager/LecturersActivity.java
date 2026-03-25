@@ -19,6 +19,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -120,20 +121,51 @@ public class LecturersActivity extends AppCompatActivity implements View.OnClick
         DatabaseReference lecturersRef =
                 FirebaseDatabase.getInstance().getReference("lecturers");
 
-        lecturersRef.addValueEventListener(new ValueEventListener() {
+        lecturersRef.addChildEventListener(new ChildEventListener() {
             @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                lecturerList.clear();
+            public void onChildAdded(@NonNull DataSnapshot snapshot, String previousChildName) {
+                Lecturer lecturer = snapshot.getValue(Lecturer.class);
+                if (lecturer != null) {
+                    lecturer.setId(snapshot.getKey());
+                    lecturerList.add(lecturer);
+                    adapter.notifyItemInserted(lecturerList.size() - 1);
+                }
+            }
 
-                for (DataSnapshot child : snapshot.getChildren()) {
-                    Lecturer lecturer = child.getValue(Lecturer.class);
-                    if (lecturer != null) {
-                        lecturer.setId(child.getKey()); // חשוב!
-                        lecturerList.add(lecturer);
+            @Override
+            public void onChildChanged(@NonNull DataSnapshot snapshot, String previousChildName) {
+                Lecturer updatedLecturer = snapshot.getValue(Lecturer.class);
+                if (updatedLecturer != null) {
+                    updatedLecturer.setId(snapshot.getKey());
+                    
+                    // Find and update the existing lecturer
+                    for (int i = 0; i < lecturerList.size(); i++) {
+                        if (lecturerList.get(i).getId().equals(snapshot.getKey())) {
+                            lecturerList.set(i, updatedLecturer);
+                            adapter.notifyItemChanged(i);
+                            break;
+                        }
                     }
                 }
+            }
 
-                adapter.notifyDataSetChanged();
+            @Override
+            public void onChildRemoved(@NonNull DataSnapshot snapshot) {
+                String removedId = snapshot.getKey();
+                
+                // Find and remove the lecturer
+                for (int i = 0; i < lecturerList.size(); i++) {
+                    if (lecturerList.get(i).getId().equals(removedId)) {
+                        lecturerList.remove(i);
+                        adapter.notifyItemRemoved(i);
+                        break;
+                    }
+                }
+            }
+
+            @Override
+            public void onChildMoved(@NonNull DataSnapshot snapshot, String previousChildName) {
+                // Handle if needed for reordering
             }
 
             @Override
