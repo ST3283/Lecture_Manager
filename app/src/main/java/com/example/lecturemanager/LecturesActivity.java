@@ -84,11 +84,14 @@ public class LecturesActivity extends AppCompatActivity implements View.OnClickL
         fabAddLecture.setEnabled(false);
 
 
+
+
+
         adapter = new LecturesAdapter(this, lectures,
                 new LecturesAdapter.OnLectureClickListener() {
                     @Override
                     public void onLectureClick(Lecture lecture) {
-                        openLectureDeatails(lecture);                    }
+                        openLectureDetails(lecture);                    }
                 },
                 new LecturesAdapter.OnLectureLongClickListener() {
                     @Override
@@ -171,7 +174,7 @@ public class LecturesActivity extends AppCompatActivity implements View.OnClickL
 
 
 
-    private void openLectureDeatails(Lecture lecture) {
+    private void openLectureDetails(Lecture lecture) {
         Intent intent = new Intent(this, LectureDetailsActivity.class)
                 .putExtra("lecturerId",lecture.getLecturerId())
                 .putExtra("groupId",lecture.getGroupId())
@@ -221,6 +224,7 @@ public class LecturesActivity extends AppCompatActivity implements View.OnClickL
             showAddLectureDialog();
         }
             else if(v.getId() == R.id.btnAddLecture){
+            Toast.makeText(this, "btnAddLecture pressed", Toast.LENGTH_SHORT).show();
                handleAddLecture();
             }
     }
@@ -299,9 +303,8 @@ public class LecturesActivity extends AppCompatActivity implements View.OnClickL
         Group selectedGroup = groups.get(groupPosition);
         Lecturer selectedLecturer = lecturers.get(lecturerPosition);
 
-        long timestamp = selectedDateTime.getTimeInMillis();
 
-        String lectureId = FirebaseDatabase.getInstance()
+        String lectureId = FirebaseDatabase.getInstance(DB_URL)
                 .getReference("lectures")
                 .push()
                 .getKey();
@@ -314,9 +317,10 @@ public class LecturesActivity extends AppCompatActivity implements View.OnClickL
         lecture.setGroupId(selectedGroup.getId());
         lecture.setLecturerId(selectedLecturer.getId());
 
+        long timestamp = selectedDateTime.getTimeInMillis();
         lecture.setDate(new Date(timestamp));
 
-        FirebaseDatabase.getInstance()
+        FirebaseDatabase.getInstance(DB_URL)
                 .getReference("lectures")
                 .child(lectureId)
                 .setValue(lecture)

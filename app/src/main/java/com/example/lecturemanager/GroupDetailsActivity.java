@@ -36,9 +36,10 @@ import java.util.Locale;
 
 public class GroupDetailsActivity extends AppCompatActivity implements View.OnClickListener {
 
+    private final static String DB_URL = "https://lecture-manager-356ad-default-rtdb.europe-west1.firebasedatabase.app/";
     String groupId;
     FloatingActionButton fabAddLecture;
-    DatabaseReference lectureRef , groupRef , lecturerRef;
+    DatabaseReference lectureRef , groupRef , lecturerRef , groupsRef;
     private  LecturesAdapter adapter;
     private EditText  etLectureTitle  , etLectureDate;
     private Spinner spLecturerName  , spLectureGroup;
@@ -69,8 +70,8 @@ public class GroupDetailsActivity extends AppCompatActivity implements View.OnCl
       fabAddLecture = findViewById(R.id.fabAddLecture);
       fabAddLecture.setOnClickListener(this);
 
-
-        lecturerRef = FirebaseDatabase.getInstance().getReference("lecturers");
+        groupRef = FirebaseDatabase.getInstance(DB_URL).getReference("groups");
+        lecturerRef = FirebaseDatabase.getInstance(DB_URL).getReference("lecturers");
 
         lecturerRef.get()
                 .addOnSuccessListener(new OnSuccessListener<DataSnapshot>() {
@@ -100,8 +101,8 @@ public class GroupDetailsActivity extends AppCompatActivity implements View.OnCl
                 });
 
 
-        groupRef = FirebaseDatabase.getInstance().getReference("groups").child(groupId);
-        groupRef.get()
+        groupsRef = FirebaseDatabase.getInstance(DB_URL).getReference("groups").child(groupId);
+        groupsRef.get()
                 .addOnSuccessListener(new OnSuccessListener<DataSnapshot>() {
                     @Override
                     public void onSuccess(DataSnapshot snapshot) {
@@ -122,8 +123,6 @@ public class GroupDetailsActivity extends AppCompatActivity implements View.OnCl
         //TODO display rcLectures
 
         //this is the lectures that fit to the group id
-        lectureRef = FirebaseDatabase.getInstance().getReference("lectures");
-        loadGroupLectures();
 
         adapter = new LecturesAdapter(this,
                 lectures,
@@ -142,7 +141,10 @@ public class GroupDetailsActivity extends AppCompatActivity implements View.OnCl
                     }
                 },
         groupRef,
-                lectureRef);
+                lecturerRef);
+
+        lectureRef = FirebaseDatabase.getInstance(DB_URL).getReference("lectures");
+        loadGroupLectures();
 
         RecyclerView rvLectures = findViewById(R.id.rvLectures);
         rvLectures.setLayoutManager(new LinearLayoutManager(this));
@@ -172,7 +174,7 @@ public class GroupDetailsActivity extends AppCompatActivity implements View.OnCl
                 })
                 .addOnFailureListener(e -> {
                     Toast.makeText(GroupDetailsActivity.this,
-                            "שגיאה בטעינת ההרצאות",
+                             "שגיאה:" + e.getMessage(),
                             Toast.LENGTH_LONG).show();
                 });
     }
@@ -230,8 +232,14 @@ public class GroupDetailsActivity extends AppCompatActivity implements View.OnCl
                 .inflate(R.layout.dialog_add_lecture, null);
         builder.setView(view);
 
+        //temporary check
         Toast.makeText(this,
                  " lecturers: " + lecturers.size(),
+                Toast.LENGTH_LONG).show();
+
+        //temporary check
+        Toast.makeText(this,
+                "groups size = " + groups.size() + " groupId = " + groupId,
                 Toast.LENGTH_LONG).show();
 
 
@@ -313,7 +321,7 @@ public class GroupDetailsActivity extends AppCompatActivity implements View.OnCl
 
         long timestamp = selectedDateTime.getTimeInMillis();
 
-        String lectureId = FirebaseDatabase.getInstance()
+        String lectureId = FirebaseDatabase.getInstance(DB_URL)
                 .getReference("lectures")
                 .push()
                 .getKey();
@@ -329,7 +337,7 @@ public class GroupDetailsActivity extends AppCompatActivity implements View.OnCl
 
         lecture.setDate(new Date(timestamp));
 
-        FirebaseDatabase.getInstance()
+        FirebaseDatabase.getInstance(DB_URL)
                 .getReference("lectures")
                 .child(lectureId)
                 .setValue(lecture)
