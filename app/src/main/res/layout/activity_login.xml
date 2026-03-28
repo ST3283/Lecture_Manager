@@ -26,7 +26,9 @@
         android:hint="Your email"
         android:inputType="textPersonName"
         android:padding="16dp"
-        android:textSize="48sp" />
+        android:textSize="48sp"
+        android:singleLine="true"
+        android:scrollHorizontally="true"/>
 
     <EditText
         android:id="@+id/etPassword"
@@ -37,14 +39,15 @@
         android:hint="Password"
         android:inputType="textPassword"
         android:padding="16dp"
-        android:textSize="48sp" />
+        android:textSize="48sp"
+        android:singleLine="true"
+        android:scrollHorizontally="true"/>
 
     <Space
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"/>
 
-<!--    TODO aa\d weight-->
 
 
     <LinearLayout

@@ -56,7 +56,7 @@ public class GroupsActivity extends AppCompatActivity implements View.OnClickLis
         rvGroups = findViewById(R.id.rvGroups);
         rvGroups.setLayoutManager(new LinearLayoutManager(this));
 
-        fabAdd = findViewById(R.id.fabAdd);
+        fabAdd = findViewById(R.id.fabAddLecture);
         fabAdd.setOnClickListener(this);
 
         groups = new ArrayList<>();
@@ -110,7 +110,7 @@ public class GroupsActivity extends AppCompatActivity implements View.OnClickLis
     public void onClick(View v) {
         int id = v.getId();
 
-        if (id == R.id.fabAdd) {
+        if (id == R.id.fabAddLecture) {
             showAddGroupDialog();
         } else if (id == R.id.btnAddGroup) {
             handleAddGroup();

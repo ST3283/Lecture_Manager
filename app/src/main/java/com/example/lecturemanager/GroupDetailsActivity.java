@@ -9,7 +9,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -31,7 +30,6 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.List;
 import java.util.Locale;
 
 public class GroupDetailsActivity extends AppCompatActivity implements View.OnClickListener {
@@ -39,7 +37,7 @@ public class GroupDetailsActivity extends AppCompatActivity implements View.OnCl
     private final static String DB_URL = "https://lecture-manager-356ad-default-rtdb.europe-west1.firebasedatabase.app/";
     String groupId;
     FloatingActionButton fabAddLecture;
-    DatabaseReference lectureRef , groupRef , lecturerRef , groupsRef;
+    DatabaseReference lectureRef , groupRef , lecturersRef, groupsRef;
     private  LecturesAdapter adapter;
     private EditText  etLectureTitle  , etLectureDate;
     private Spinner spLecturerName  , spLectureGroup;
@@ -70,10 +68,11 @@ public class GroupDetailsActivity extends AppCompatActivity implements View.OnCl
       fabAddLecture = findViewById(R.id.fabAddLecture);
       fabAddLecture.setOnClickListener(this);
 
-        groupRef = FirebaseDatabase.getInstance(DB_URL).getReference("groups");
-        lecturerRef = FirebaseDatabase.getInstance(DB_URL).getReference("lecturers");
+        groupRef = FirebaseDatabase.getInstance(DB_URL).getReference("groups").child(groupId);
+        groupsRef = FirebaseDatabase.getInstance(DB_URL).getReference("groups");
+        lecturersRef = FirebaseDatabase.getInstance(DB_URL).getReference("lecturers");
 
-        lecturerRef.get()
+        lecturersRef.get()
                 .addOnSuccessListener(new OnSuccessListener<DataSnapshot>() {
                     @Override
                     public void onSuccess(DataSnapshot snapshot) {
@@ -101,8 +100,7 @@ public class GroupDetailsActivity extends AppCompatActivity implements View.OnCl
                 });
 
 
-        groupsRef = FirebaseDatabase.getInstance(DB_URL).getReference("groups").child(groupId);
-        groupsRef.get()
+        groupRef.get()
                 .addOnSuccessListener(new OnSuccessListener<DataSnapshot>() {
                     @Override
                     public void onSuccess(DataSnapshot snapshot) {
@@ -119,8 +117,6 @@ public class GroupDetailsActivity extends AppCompatActivity implements View.OnCl
                                     Toast.LENGTH_LONG).show();
                         });
 
-        // TODO display group details
-        //TODO display rcLectures
 
         //this is the lectures that fit to the group id
 
@@ -140,8 +136,8 @@ public class GroupDetailsActivity extends AppCompatActivity implements View.OnCl
                         handleLectureLongClick(lecture);
                     }
                 },
-        groupRef,
-                lecturerRef);
+        groupsRef,
+                lecturersRef);
 
         lectureRef = FirebaseDatabase.getInstance(DB_URL).getReference("lectures");
         loadGroupLectures();
@@ -214,6 +210,10 @@ public class GroupDetailsActivity extends AppCompatActivity implements View.OnCl
     private void handleLectureClick(Lecture lecture) {
         Intent intent = new Intent(this, LectureDetailsActivity.class);
         intent.putExtra("lectureId", lecture.getLectureId());
+        intent.putExtra("lecturerId", lecture.getLecturerId());
+        intent.putExtra("groupId", lecture.getGroupId());
+        intent.putExtra("lectureTitle", lecture.getTitle());
+        intent.putExtra("lectureDate", lecture.getDate().getTime());
         startActivity(intent);
     }
     @Override
@@ -231,17 +231,6 @@ public class GroupDetailsActivity extends AppCompatActivity implements View.OnCl
         View view = LayoutInflater.from(this)
                 .inflate(R.layout.dialog_add_lecture, null);
         builder.setView(view);
-
-        //temporary check
-        Toast.makeText(this,
-                 " lecturers: " + lecturers.size(),
-                Toast.LENGTH_LONG).show();
-
-        //temporary check
-        Toast.makeText(this,
-                "groups size = " + groups.size() + " groupId = " + groupId,
-                Toast.LENGTH_LONG).show();
-
 
         spLectureGroup = view.findViewById(R.id.spLectureGroup);
         spLecturerName = view.findViewById(R.id.spLecturerName);

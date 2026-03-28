@@ -1,7 +1,9 @@
 package com.example.lecturemanager;
 
+
 import android.Manifest;
 import android.app.DatePickerDialog;
+import android.app.TimePickerDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -9,9 +11,10 @@ import android.os.Build;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.DatePicker;
 import android.widget.EditText;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -23,24 +26,38 @@ import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Date;
+import java.util.Locale;
 
 public class LecturerDetailsActivity extends AppCompatActivity implements View.OnClickListener {
 
+    private final static String DB_URL = "https://lecture-manager-356ad-default-rtdb.europe-west1.firebasedatabase.app/";
     private TextView tvName, tvEmail, tvPhone;
     private String lecturerId ;
     private RecyclerView rvLecturerLectures;
-    private ArrayList<Lecture> lectures;
+    private EditText  etLectureTitle  , etLectureDate;
+    private Spinner spLecturerName  , spLectureGroup;
+    private Button btnAddLecture;
+    private AlertDialog addLectureDialog;
     private LecturesAdapter adapter;
-    private Lecturer lecturer;
-    private Calendar calendar;
-    private DatabaseReference lecturerRef , groupRef , lectureRef ;
-    private FloatingActionButton fabAdd;
+    private Calendar selectedDateTime = Calendar.getInstance();
+
+    private DatabaseReference lecturerRef , groupsRef , lectureRef , lecturersRef ;
+    private FloatingActionButton fabAddLecture;
+    private ArrayList<Group> groups = new ArrayList<>();
+    private ArrayList<Lecturer> lecturers = new ArrayList<>();
+    private  ArrayList<Lecture> lectures = new ArrayList<>();
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,9 +68,11 @@ public class LecturerDetailsActivity extends AppCompatActivity implements View.O
 
         lecturerId = getIntent().getStringExtra("lecturerId");
 
-        lecturerRef = FirebaseDatabase.getInstance().getReference("lecturers").child(lecturerId);
-        lectureRef = FirebaseDatabase.getInstance().getReference("lectures");
-        groupRef = FirebaseDatabase.getInstance().getReference("groups");
+        lecturerRef = FirebaseDatabase.getInstance(DB_URL).getReference("lecturers").child(lecturerId);
+        lectureRef = FirebaseDatabase.getInstance(DB_URL).getReference("lectures");
+        groupsRef = FirebaseDatabase.getInstance(DB_URL).getReference("groups");
+        lecturersRef = FirebaseDatabase.getInstance(DB_URL).getReference("lecturers");
+
 
 
         tvName = findViewById(R.id.tvLecturerName);
@@ -72,8 +91,42 @@ public class LecturerDetailsActivity extends AppCompatActivity implements View.O
         tvPhone.setText(lecturerPhone);
 
 
-        // RecyclerView
-        lectures = new ArrayList<>();
+        lecturerRef.get()
+                .addOnSuccessListener(snapshot -> {
+                    lecturers.clear();
+
+                    Lecturer lecturer = snapshot.getValue(Lecturer.class);
+                    if (lecturer != null) {
+                        lecturer.setId(snapshot.getKey());
+                        lecturers.add(lecturer);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(LecturerDetailsActivity.this,
+                            "lecturer failed: " + e.getMessage(),
+                            Toast.LENGTH_LONG).show();
+                });
+
+
+        groupsRef.get()
+                .addOnSuccessListener(snapshot -> {
+                    groups.clear();
+                    for (DataSnapshot child : snapshot.getChildren()) {
+                        Group group = child.getValue(Group.class);
+                        if (group != null) {
+                            group.setId(child.getKey());
+                            groups.add(group);
+                        }
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(LecturerDetailsActivity.this,
+                            "group failed: ",
+                            Toast.LENGTH_LONG).show();
+                });
+
+
+
         adapter = new LecturesAdapter(this,
                 lectures,
                 // לחיצה רגילה כניסה למידע על הרצאה
@@ -83,178 +136,54 @@ public class LecturerDetailsActivity extends AppCompatActivity implements View.O
                         handleLectureClick(lecture);
                     }
                 },
-                // לחיצה ארוכה עריכה
+                // לחיצה ארוכה מחיקה
                 new LecturesAdapter.OnLectureLongClickListener() {
                     @Override
                     public void onLectureLongClick(Lecture lecture) {
                         handleLectureLongClick(lecture);
                     }
                 },
-                groupRef,
-                lectureRef);
+                groupsRef,
+                lecturersRef);
         rvLecturerLectures.setLayoutManager(new LinearLayoutManager(this));
         rvLecturerLectures.setAdapter(adapter);
 
+        loadLecturerLectures();
 
 
-        // ניתן להוסיף FAB או כפתור במסך להוספת הרצאה חדשה
-
-        fabAdd = findViewById(R.id.fabAdd);
-        fabAdd.setOnClickListener(this);
+//add a lecture buttun
+        fabAddLecture = findViewById(R.id.fabAddLecture);
+        fabAddLecture.setOnClickListener(this);
     }
 
-    // ----------- טוען הרצאות של המרצה בלבד ----------------
-    private void loadLectures() {
+    private void loadLecturerLectures() {
+        lectureRef.orderByChild("lecturerId").equalTo(lecturerId)
+                .get()
+                .addOnSuccessListener(new OnSuccessListener<DataSnapshot>() {
+                    @Override
+                    public void onSuccess(DataSnapshot snapshot) {
+                        lectures.clear();
 
-        adapter.notifyDataSetChanged();
+                        for (DataSnapshot lecSnap : snapshot.getChildren()) {
+                            Lecture lec = lecSnap.getValue(Lecture.class);
+
+                            if (lec != null) {
+                                lec.setLectureId(lecSnap.getKey());
+                                lectures.add(lec);
+                            }
+                        }
+
+                        adapter.notifyDataSetChanged();
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(LecturerDetailsActivity.this,
+                            "שגיאה:" + e.getMessage(),
+                            Toast.LENGTH_LONG).show();
+                });
     }
 
-    // ----------- הוספה / עריכה של הרצאה ----------------
-//    private void showAddEditLectureDialog(final Lecture lectureToEdit) {
-//
-//        // 1️⃣ יצירת דיאלוג AlertDialog עם layout של הוספה/עריכה
-//        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-//        View view = LayoutInflater.from(this).inflate(R.layout.dialog_add_lecture, null);
-//        builder.setView(view);
-//
-//        // 2️⃣ קישור רכיבי הדיאלוג
-//        final EditText etName = view.findViewById(R.id.etLecturerName);
-//        final EditText etDate = view.findViewById(R.id.etLectureDate);
-//        final Button btnAdd = view.findViewById(R.id.btnAddLecture);
-//
-//        // 3️⃣ אתחול Calendar
-//        calendar = Calendar.getInstance();
-//
-//        // 4️⃣ אם זו עריכה – נעדכן את השדות עם נתוני ההרצאה הקיימת
-//        if (lectureToEdit != null) {
-//            etName.setText(lectureToEdit.getLecturerName());
-////            etDate.setText(lectureToEdit.getDate());
-//            btnAdd.setText("עדכן"); // כפתור משנה טקסט
-//        }
-//
-//        // 5️⃣ יצירת ה־AlertDialog בפועל
-//        final AlertDialog dialog = builder.create();
-//        dialog.show();
-//
-//        // 6️⃣ DatePicker – פתיחת לוח שנה בעת לחיצה על שדה התאריך
-//        etDate.setOnClickListener(v -> {
-//            int year = calendar.get(Calendar.YEAR);
-//            int month = calendar.get(Calendar.MONTH);
-//            int day = calendar.get(Calendar.DAY_OF_MONTH);
-//
-//            DatePickerDialog datePickerDialog = new DatePickerDialog(
-//                    LecturerDetailsActivity.this,
-//                    new DatePickerDialog.OnDateSetListener() {
-//                        @Override
-//                        public void onDateSet(DatePicker view, int selectedYear, int selectedMonth, int selectedDay) {
-//                            // עדכון ה־Calendar עם התאריך שנבחר
-//                            calendar.set(selectedYear, selectedMonth, selectedDay);
-//
-//                            // יצירת מחרוזת תאריך להצגה
-//                            String date = selectedDay + "/" + (selectedMonth + 1) + "/" + selectedYear;
-//                            etDate.setText(date);
-//                        }
-//                    },
-//                    year,
-//                    month,
-//                    day
-//            );
-//
-//            datePickerDialog.show();
-//        });
-//
-//        // 7️⃣ כפתור הוספה / עדכון
-//        btnAdd.setOnClickListener(v -> {
-//            String name = etName.getText().toString().trim();
-//            String date = etDate.getText().toString().trim();
-//
-//            // בדיקה אם השדות מלאים
-//            if (name.isEmpty() || date.isEmpty()) {
-//                Toast.makeText(this, "נא למלא את כל השדות", Toast.LENGTH_SHORT).show();
-//                return;
-//            }
-//
-//            // 🔹 אם זו הוספה חדשה
-//            if (lectureToEdit == null) {
-//                Lecture lecture = new Lecture();
-//                lecture.setLecturerName(name);
-////                lecture.setDate(date);
-//                lecture.setLecturerId(lecturer.getId());
-//                lecture.setGroupId(groupId);
-//
-//                DocumentReference docRef = db.collection("lectures").document();
-//                lecture.setId(docRef.getId());
-//
-//                docRef.set(lecture)
-//                        .addOnSuccessListener(aVoid -> {
-//                            Toast.makeText(this, "ההרצאה נוספה", Toast.LENGTH_SHORT).show();
-//                            dialog.dismiss();
-//
-//                            // 🔔 תזכורת להרצאה
-//                            long reminderTime = calendar.getTimeInMillis();
-//                            scheduleLectureReminder(lecture.getLecturerName(), reminderTime);
-//                        });
-//
-//                // 🔹 אם זו עריכה של הרצאה קיימת
-//            } else {
-//                lectureToEdit.setLecturerName(name);
-////                lectureToEdit.setDate(date);
-//
-//                db.collection("lectures")
-//                        .document(lectureToEdit.getId())
-//                        .set(lectureToEdit)
-//                        .addOnSuccessListener(aVoid -> {
-//                            Toast.makeText(this, "ההרצאה עודכנה", Toast.LENGTH_SHORT).show();
-//                            dialog.dismiss();
-//
-//                            // 🔔 עדכון תזכורת להרצאה
-//                            long reminderTime = calendar.getTimeInMillis();
-//                            scheduleLectureReminder(lectureToEdit.getLecturerName(), reminderTime);
-//                        });
-//            }
-//        });
-//    }
-//
-//
-//    // ----------- מחיקת הרצאה ----------------
-//    private void showDeleteLectureDialog(final Lecture lecture) {
-//        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-//        builder.setTitle("מחיקת הרצאה");
-//        builder.setMessage("האם אתה בטוח שברצונך למחוק את ההרצאה?");
-//
-//        builder.setPositiveButton("מחק", (dialog, which) -> {
-//            db.collection("lectures")
-//                    .document(lecture.getId())
-//                    .delete()
-//                    .addOnSuccessListener(aVoid ->
-//                            Toast.makeText(LecturerDetailsActivity.this, "ההרצאה נמחקה", Toast.LENGTH_SHORT).show()
-//                    );
-//        });
-//
-//        builder.setNegativeButton("ביטול", null);
-//        builder.show();
-//    }
-//
-//    private void scheduleLectureReminder(String lectureName, long timeInMillis) {
-//        Intent intent = new Intent(this, LectureReminderReceiver.class);
-//        intent.putExtra("lectureName", lectureName);
-//
-//        PendingIntent pendingIntent = PendingIntent.getBroadcast(
-//                this,
-//                (int) System.currentTimeMillis(),
-//                intent,
-//                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
-//        );
-//
-//        AlarmManager alarmManager =
-//                (AlarmManager) getSystemService(Context.ALARM_SERVICE);
-//
-//        alarmManager.setExact(
-//                AlarmManager.RTC_WAKEUP,
-//                timeInMillis,
-//                pendingIntent
-//        );
-//    }
+
     private void requestNotificationPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(
@@ -274,12 +203,175 @@ public class LecturerDetailsActivity extends AppCompatActivity implements View.O
     @Override
     public void onClick(View v) {
         if (v.getId() == R.id.fabAddLecture){
-            showAddLectureDialog(lecturerId);
+            showAddLectureDialog();
+        }
+        else if(v.getId() == R.id.btnAddLecture){
+            handleAddLecture();
         }
     }
 
-    private void handleAddLecture() {
+    private void showAddLectureDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        View view = LayoutInflater.from(this)
+                .inflate(R.layout.dialog_add_lecture, null);
+        builder.setView(view);
+
+
+
+        spLectureGroup = view.findViewById(R.id.spLectureGroup);
+        spLecturerName = view.findViewById(R.id.spLecturerName);
+        etLectureTitle = view.findViewById(R.id.etLectureTitle);
+        etLectureDate = view.findViewById(R.id.etLectureDate);
+
+        ArrayList<String> groupNames = new ArrayList<>();
+        for (Group group : groups) {
+            groupNames.add(group.getName());
+        }
+
+        ArrayList<String> lecturerNames = new ArrayList<>();
+        for (Lecturer lecturer : lecturers) {
+            lecturerNames.add(lecturer.getName());
+        }
+
+        ArrayAdapter<String> groupsAdapter = new ArrayAdapter<>(
+                this,
+                android.R.layout.simple_spinner_item,
+                groupNames
+        );
+        groupsAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spLectureGroup.setAdapter(groupsAdapter);
+
+        ArrayAdapter<String> lecturersAdapter = new ArrayAdapter<>(
+                this,
+                android.R.layout.simple_spinner_item,
+                lecturerNames
+        );
+        lecturersAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spLecturerName.setAdapter(lecturersAdapter);
+
+        for (int i = 0; i < lecturers.size(); i++) { //in order to choose automationically the lecturer
+            if (lecturers.get(i).getId().equals(lecturerId)) {
+                spLecturerName.setSelection(i);
+                break;
+            }
+        }
+
+        spLecturerName.setEnabled(false);//shuts down the spinner so you can't change it
+        spLecturerName.setClickable(false);
+
+        etLectureDate.setOnClickListener(v -> showDateTimePicker());
+
+        btnAddLecture = view.findViewById(R.id.btnAddLecture);
+        btnAddLecture.setOnClickListener(this);
+
+        addLectureDialog = builder.create();
+        addLectureDialog.show();
     }
+
+    public void handleAddLecture() {
+
+        // במקום group ו-lecturerName, נשאר רק עם title
+        String title = etLectureTitle.getText().toString().trim();
+
+        if (title.isEmpty()) {
+            Toast.makeText(this, "נא למלא את כל השדות", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // בדיקה שהרשימות נטענו
+        if (groups.isEmpty() ) {
+            Toast.makeText(this, "קבוצות לא נטענו", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // מקבלים את הבחירה מה-Spinner
+        int groupPosition = spLectureGroup.getSelectedItemPosition();
+
+        Group selectedGroup = groups.get(groupPosition);
+
+        String lectureId = FirebaseDatabase.getInstance(DB_URL)
+                .getReference("lectures")
+                .push()
+                .getKey();
+
+        Lecture lecture = new Lecture();
+        lecture.setLectureId(lectureId);
+        lecture.setTitle(title);
+
+        // 🔹 השינוי החשוב – עובדים עם IDs
+        lecture.setGroupId(selectedGroup.getId());
+        lecture.setLecturerId(lecturerId);
+
+        long timestamp = selectedDateTime.getTimeInMillis();
+        lecture.setDate(new Date(timestamp));
+
+        FirebaseDatabase.getInstance(DB_URL)
+                .getReference("lectures")
+                .child(lectureId)
+                .setValue(lecture)
+                .addOnSuccessListener(unused -> {
+                    Toast.makeText(this, "הרצאה נוספה בהצלחה", Toast.LENGTH_LONG).show();
+                    addLectureDialog.dismiss();
+
+                    loadLecturerLectures();//update the rvLecture
+
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this, "שגיאה: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                });
+    }
+
+    private void showDateTimePicker() {
+
+        int year = selectedDateTime.get(Calendar.YEAR); // //Current date used to put as defult
+        int month = selectedDateTime.get(Calendar.MONTH);
+        int day = selectedDateTime.get(Calendar.DAY_OF_MONTH);
+
+        DatePickerDialog datePickerDialog = new DatePickerDialog(
+                this,
+                (view, selectedYear, selectedMonth, selectedDay) -> {
+
+                    selectedDateTime.set(Calendar.YEAR, selectedYear);
+                    selectedDateTime.set(Calendar.MONTH, selectedMonth);
+                    selectedDateTime.set(Calendar.DAY_OF_MONTH, selectedDay);
+
+                    showTimePicker();
+                },
+                year, month, day
+        );
+
+        datePickerDialog.show();
+    }
+
+    private void showTimePicker() {
+
+        int hour = selectedDateTime.get(Calendar.HOUR_OF_DAY); //Current time, used to put as defult
+        int minute = selectedDateTime.get(Calendar.MINUTE);
+
+        TimePickerDialog timePickerDialog = new TimePickerDialog(
+                this,
+                (view, selectedHour, selectedMinute) -> {
+
+                    selectedDateTime.set(Calendar.HOUR_OF_DAY, selectedHour);
+                    selectedDateTime.set(Calendar.MINUTE, selectedMinute);
+
+                    updateDateField();
+                },
+                hour, minute, true
+        );
+
+        timePickerDialog.show();
+    }
+
+    private void updateDateField() {
+
+        SimpleDateFormat sdf =
+                new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault());
+
+        etLectureDate.setText(sdf.format(selectedDateTime.getTime()));
+    }
+
+
     private void handleLectureLongClick(Lecture lecture) {
         new AlertDialog.Builder(this)
                 .setTitle("מחיקה")
@@ -315,41 +407,16 @@ public class LecturerDetailsActivity extends AppCompatActivity implements View.O
     private void handleLectureClick(Lecture lecture) {
         Intent intent = new Intent(this, LectureDetailsActivity.class);
         intent.putExtra("lectureId", lecture.getLectureId());
+        intent.putExtra("lecturerId", lecture.getLecturerId());
+        intent.putExtra("groupId", lecture.getGroupId());
+        intent.putExtra("lectureTitle", lecture.getTitle());
+        intent.putExtra("lectureDate", lecture.getDate().getTime());
         startActivity(intent);
     }
-    private void showAddLectureDialog(final String groupId) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        View view = LayoutInflater.from(this).inflate(R.layout.dialog_add_lecture, null);
-        builder.setView(view);
 
-        final EditText etTitle = (EditText) view.findViewById(R.id.etLectureTitle);
-        final EditText etLecturer = (EditText) view.findViewById(R.id.etLecturerName);
-        final EditText etDate = (EditText) view.findViewById(R.id.etLectureDate);
-        final Button btnAdd = (Button) view.findViewById(R.id.btnAddLecture);
 
-        final AlertDialog dialog = builder.create();
-        dialog.show();
 
-        // DatePicker ללחיצה על שדה התאריך
-        etDate.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                final Calendar c = Calendar.getInstance();
-                int year = c.get(Calendar.YEAR);
-                int month = c.get(Calendar.MONTH);
-                int day = c.get(Calendar.DAY_OF_MONTH);
 
-                DatePickerDialog dpd = new DatePickerDialog(LecturerDetailsActivity.this,
-                        new DatePickerDialog.OnDateSetListener() {
-                            @Override
-                            public void onDateSet(DatePicker view, int year, int month, int dayOfMonth) {
-                                String dateStr = dayOfMonth + "/" + (month + 1) + "/" + year;
-                                etDate.setText(dateStr);
-                            }
-                        }, year, month, day);
-                dpd.show();
-            }
-        });
-    }
+
 }
 

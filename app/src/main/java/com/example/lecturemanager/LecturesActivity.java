@@ -175,11 +175,13 @@ public class LecturesActivity extends AppCompatActivity implements View.OnClickL
 
 
     private void openLectureDetails(Lecture lecture) {
+        long date = lecture.getDate().getTime();
+
         Intent intent = new Intent(this, LectureDetailsActivity.class)
                 .putExtra("lecturerId",lecture.getLecturerId())
                 .putExtra("groupId",lecture.getGroupId())
                 .putExtra("lectureTitle",lecture.getTitle())
-                .putExtra("lectureDate", lecture.getDate())
+                .putExtra("lectureDate", date)
                 .putExtra("lectureId",lecture.getLectureId());
         startActivity(intent);
     }
@@ -333,6 +335,7 @@ public class LecturesActivity extends AppCompatActivity implements View.OnClickL
                 });
     }
     private void showEditLectureDialog(Lecture lecture) {
+        //TODO do the method
     }
     private void showDateTimePicker() {
 
