@@ -36,27 +36,28 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 
-public class LecturerDetailsActivity extends AppCompatActivity implements View.OnClickListener {
+public class LecturerDetailsActivity extends AppCompatActivity implements View.OnClickListener, View.OnLongClickListener {
 
     private final static String DB_URL = "https://lecture-manager-356ad-default-rtdb.europe-west1.firebasedatabase.app/";
     private TextView tvName, tvEmail, tvPhone;
-    private String lecturerId ;
+    private String lecturerId;
     private RecyclerView rvLecturerLectures;
-    private EditText  etLectureTitle  , etLectureDate;
-    private Spinner spLecturerName  , spLectureGroup;
+    private EditText etLectureTitle, etLectureDate;
+    private Spinner spLecturerName, spLectureGroup;
     private Button btnAddLecture;
     private AlertDialog addLectureDialog;
     private LecturesAdapter adapter;
     private Calendar selectedDateTime = Calendar.getInstance();
 
-    private DatabaseReference lecturerRef , groupsRef , lectureRef , lecturersRef ;
+    private DatabaseReference lecturerRef, groupsRef, lectureRef, lecturersRef;
     private FloatingActionButton fabAddLecture;
     private ArrayList<Group> groups = new ArrayList<>();
     private ArrayList<Lecturer> lecturers = new ArrayList<>();
-    private  ArrayList<Lecture> lectures = new ArrayList<>();
-
+    private ArrayList<Lecture> lectures = new ArrayList<>();
 
 
     @Override
@@ -74,21 +75,24 @@ public class LecturerDetailsActivity extends AppCompatActivity implements View.O
         lecturersRef = FirebaseDatabase.getInstance(DB_URL).getReference("lecturers");
 
 
-
         tvName = findViewById(R.id.tvLecturerName);
         tvEmail = findViewById(R.id.tvLecturerEmail);
         tvPhone = findViewById(R.id.tvLecturerPhone);
         rvLecturerLectures = findViewById(R.id.rvLecturerLectures);
 
         // מקבל את המרצה מה Intent
-        String lecturerId =  getIntent().getStringExtra("lecturerId");
-        String lecturerName =  getIntent().getStringExtra("lecturerName");
-        String lecturerEmail =  getIntent().getStringExtra("lecturerEmail");
+        String lecturerId = getIntent().getStringExtra("lecturerId");
+        String lecturerName = getIntent().getStringExtra("lecturerName");
+        String lecturerEmail = getIntent().getStringExtra("lecturerEmail");
         String lecturerPhone = getIntent().getStringExtra("lecturerPhone");
 
         tvName.setText(lecturerName);
         tvEmail.setText(lecturerEmail);
         tvPhone.setText(lecturerPhone);
+
+        tvName.setOnLongClickListener(this);
+        tvEmail.setOnLongClickListener(this);
+        tvPhone.setOnLongClickListener(this);
 
 
         lecturerRef.get()
@@ -124,7 +128,6 @@ public class LecturerDetailsActivity extends AppCompatActivity implements View.O
                             "group failed: ",
                             Toast.LENGTH_LONG).show();
                 });
-
 
 
         adapter = new LecturesAdapter(this,
@@ -202,10 +205,9 @@ public class LecturerDetailsActivity extends AppCompatActivity implements View.O
 
     @Override
     public void onClick(View v) {
-        if (v.getId() == R.id.fabAddLecture){
+        if (v.getId() == R.id.fabAddLecture) {
             showAddLectureDialog();
-        }
-        else if(v.getId() == R.id.btnAddLecture){
+        } else if (v.getId() == R.id.btnAddLecture) {
             handleAddLecture();
         }
     }
@@ -215,7 +217,6 @@ public class LecturerDetailsActivity extends AppCompatActivity implements View.O
         View view = LayoutInflater.from(this)
                 .inflate(R.layout.dialog_add_lecture, null);
         builder.setView(view);
-
 
 
         spLectureGroup = view.findViewById(R.id.spLectureGroup);
@@ -279,7 +280,7 @@ public class LecturerDetailsActivity extends AppCompatActivity implements View.O
         }
 
         // בדיקה שהרשימות נטענו
-        if (groups.isEmpty() ) {
+        if (groups.isEmpty()) {
             Toast.makeText(this, "קבוצות לא נטענו", Toast.LENGTH_SHORT).show();
             return;
         }
@@ -414,9 +415,96 @@ public class LecturerDetailsActivity extends AppCompatActivity implements View.O
         startActivity(intent);
     }
 
+    //when long press edit or delete lecturer
+    @Override
+    public boolean onLongClick(View v) {
+
+        if (v.getId() == R.id.tvLecturerName
+                || v.getId() == R.id.tvLecturerEmail
+                || v.getId() == R.id.tvLecturerPhone) {
+
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+
+            View view = LayoutInflater.from(this)
+                    .inflate(R.layout.dialog_add_lecturer, null); // חשוב: layout של מרצה
+
+            builder.setView(view);
+
+            final EditText etName = view.findViewById(R.id.etLecturerName);
+            final EditText etEmail = view.findViewById(R.id.etLecturerEmail);
+            final EditText etPhone = view.findViewById(R.id.etLecturerPhone);
+
+            Button btnSave = view.findViewById(R.id.btnAddLecturer);
+            Button btnDelete = view.findViewById(R.id.btnDelete);
 
 
+            // הכנסת ערכים קיימים
+            etName.setText(tvName.getText().toString());
+            etEmail.setText(tvEmail.getText().toString());
+            etPhone.setText(tvPhone.getText().toString());
 
+            btnSave.setText("שמור");
+            btnDelete.setText("מחק");
 
+            final AlertDialog dialog = builder.create();
+            dialog.show();
+
+            btnSave.setOnClickListener(v1 -> {
+
+                String newName = etName.getText().toString().trim();
+                String newEmail = etEmail.getText().toString().trim();
+                String newPhone = etPhone.getText().toString().trim();
+
+                if (newName.isEmpty() || newEmail.isEmpty() || newPhone.isEmpty()) {
+                    Toast.makeText(LecturerDetailsActivity.this,
+                            "נא למלא את כל השדות",
+                            Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                Map<String, Object> updates = new HashMap<>();
+                updates.put("name", newName);
+                updates.put("email", newEmail);
+                updates.put("phone", newPhone);
+
+                DBRefs.lecturersRef.child(lecturerId)
+                        .updateChildren(updates)
+                        .addOnSuccessListener(unused -> {
+                            Toast.makeText(LecturerDetailsActivity.this,
+                                    "מרצה עודכן",
+                                    Toast.LENGTH_SHORT).show();
+
+                            // עדכון ה־UI
+                            tvName.setText(newName);
+                            tvEmail.setText(newEmail);
+                            tvPhone.setText(newPhone);
+                        })
+                        .addOnFailureListener(e -> {
+                            Toast.makeText(LecturerDetailsActivity.this,
+                                    "שגיאה בעדכון: " + e.getMessage(),
+                                    Toast.LENGTH_LONG).show();
+                        });
+
+                dialog.dismiss();
+            });
+            btnDelete.setOnClickListener(v1 -> {
+                lecturersRef.child(lecturerId).removeValue()
+                        .addOnSuccessListener(new com.google.android.gms.tasks.OnSuccessListener<Void>() {
+                            @Override
+                            public void onSuccess(Void aVoid) {
+                                Toast.makeText(LecturerDetailsActivity.this, "מרצה נמחק", Toast.LENGTH_SHORT).show();
+                                // ה-SnapshotListener ב-Activity יעדכן את הרשימה אוטומטית
+                            }
+                        })
+                        .addOnFailureListener(new com.google.android.gms.tasks.OnFailureListener() {
+                            @Override
+                            public void onFailure(@NonNull Exception e) {
+                                Toast.makeText(LecturerDetailsActivity.this, "שגיאה במחיקה: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                            }
+                        });
+                dialog.dismiss();
+            });
+        }
+        return true;
+    }
 }
-

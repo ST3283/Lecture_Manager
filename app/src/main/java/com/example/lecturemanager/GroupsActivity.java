@@ -180,20 +180,6 @@ public class GroupsActivity extends AppCompatActivity implements View.OnClickLis
             }
         });
 
-
-        // FOR LECTURES ACTIVITY
-//        ArrayList<Group> ggroups = new ArrayList<>();
-//        groupsRef.get().addOnSuccessListener(new OnSuccessListener<DataSnapshot>() {
-//            @Override
-//            public void onSuccess(DataSnapshot snapshot) {
-//                for (DataSnapshot child : snapshot.getChildren()) {
-//                    Group group = child.getValue(Group.class);
-//                    group.setId(child.getKey()); // חשוב!
-//                    ggroups.add(group);
-//                }
-//            }
-//        });
-
     }
 
     private void openGroupDetails(Group group) {

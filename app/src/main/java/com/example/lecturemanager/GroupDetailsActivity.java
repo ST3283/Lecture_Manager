@@ -30,9 +30,11 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 
-public class GroupDetailsActivity extends AppCompatActivity implements View.OnClickListener {
+public class GroupDetailsActivity extends AppCompatActivity implements View.OnClickListener, View.OnLongClickListener {
 
     private final static String DB_URL = "https://lecture-manager-356ad-default-rtdb.europe-west1.firebasedatabase.app/";
     String groupId;
@@ -47,6 +49,8 @@ public class GroupDetailsActivity extends AppCompatActivity implements View.OnCl
     private ArrayList<Lecturer> lecturers = new ArrayList<>();
     private ArrayList<Group> groups = new ArrayList<>();
     private  ArrayList<Lecture> lectures = new ArrayList<>();
+    private String name, description;
+
 
 
 
@@ -59,11 +63,15 @@ public class GroupDetailsActivity extends AppCompatActivity implements View.OnCl
         TextView tvDescription = findViewById(R.id.tvGroupDescription);
 
         groupId = getIntent().getStringExtra("groupId");
-        String name = getIntent().getStringExtra("groupName");
-        String description = getIntent().getStringExtra("groupDescription");
+        name = getIntent().getStringExtra("groupName");
+        description = getIntent().getStringExtra("groupDescription");
 
         tvName.setText(name);
         tvDescription.setText(description);
+
+        tvName.setOnLongClickListener(this);
+        tvDescription.setOnLongClickListener(this);
+
 
       fabAddLecture = findViewById(R.id.fabAddLecture);
       fabAddLecture.setOnClickListener(this);
@@ -388,5 +396,83 @@ public class GroupDetailsActivity extends AppCompatActivity implements View.OnCl
                 new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault());
 
         etLectureDate.setText(sdf.format(selectedDateTime.getTime()));
+    }
+//when long press edit or delete group
+    @Override
+    public boolean onLongClick(View v) {
+        if (v.getId() == R.id.tvGroupName || v.getId() == R.id.tvGroupDescription){
+
+                android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
+                View view = LayoutInflater.from(this)
+                        .inflate(R.layout.dialog_add_group, null);
+                builder.setView(view);
+
+                final EditText etName = view.findViewById(R.id.etGroupName);
+                final EditText etDescription = view.findViewById(R.id.etGroupDescription);
+                Button btnSave = view.findViewById(R.id.btnAddGroup);
+                Button btnDelete = view.findViewById(R.id.btnDelete);
+
+                etName.setText(name);
+                etDescription.setText(description);
+                btnSave.setText("שמור");
+                btnDelete.setText("מחק");
+
+                final android.app.AlertDialog dialog = builder.create();
+                dialog.show();
+
+                btnSave.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        String newName = etName.getText().toString().trim();
+                        String newDesc = etDescription.getText().toString().trim();
+
+                        if (newName.isEmpty() || newDesc.isEmpty()) {
+                            Toast.makeText(GroupDetailsActivity.this, "נא למלא את כל השדות", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+
+                        Map<String, Object> updates = new HashMap<>();
+                        updates.put("name", newName);
+                        updates.put("description", newDesc);
+
+                        groupsRef.child(groupId).updateChildren(updates)
+                                .addOnSuccessListener(new com.google.android.gms.tasks.OnSuccessListener<Void>() {
+                                    @Override
+                                    public void onSuccess(Void aVoid) {
+                                        Toast.makeText(GroupDetailsActivity.this, "קבוצה עודכנה", Toast.LENGTH_SHORT).show();
+
+                                    }
+                                })
+                                .addOnFailureListener(new com.google.android.gms.tasks.OnFailureListener() {
+                                    @Override
+                                    public void onFailure(@NonNull Exception e) {
+                                        Toast.makeText(GroupDetailsActivity.this, "שגיאה בעדכון: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                                    }
+                                });
+                        dialog.dismiss();
+                    }
+                });
+
+            btnDelete.setOnClickListener(v1 -> {
+                groupsRef.child(groupId).removeValue()
+                        .addOnSuccessListener(new com.google.android.gms.tasks.OnSuccessListener<Void>() {
+                            @Override
+                            public void onSuccess(Void aVoid) {
+                                Toast.makeText(GroupDetailsActivity.this, "קבוצה נמחקה", Toast.LENGTH_SHORT).show();
+                                // ה-SnapshotListener ב-Activity יעדכן את הרשימה אוטומטית
+                            }
+                        })
+                        .addOnFailureListener(new com.google.android.gms.tasks.OnFailureListener() {
+                            @Override
+                            public void onFailure(@NonNull Exception e) {
+                                Toast.makeText(GroupDetailsActivity.this, "שגיאה במחיקה: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                            }
+                        });
+                dialog.dismiss();
+            });
+
+        }
+
+        return false;
     }
 }
