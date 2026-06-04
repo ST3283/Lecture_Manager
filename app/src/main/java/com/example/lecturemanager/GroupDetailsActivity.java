@@ -9,7 +9,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -31,14 +30,16 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.List;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 
-public class GroupDetailsActivity extends AppCompatActivity implements View.OnClickListener {
+public class GroupDetailsActivity extends AppCompatActivity implements View.OnClickListener, View.OnLongClickListener {
 
+    private final static String DB_URL = "https://lecture-manager-356ad-default-rtdb.europe-west1.firebasedatabase.app/";
     String groupId;
     FloatingActionButton fabAddLecture;
-    DatabaseReference lectureRef , groupRef , lecturerRef;
+    DatabaseReference lectureRef , groupRef , lecturersRef, groupsRef;
     private  LecturesAdapter adapter;
     private EditText  etLectureTitle  , etLectureDate;
     private Spinner spLecturerName  , spLectureGroup;
@@ -48,6 +49,8 @@ public class GroupDetailsActivity extends AppCompatActivity implements View.OnCl
     private ArrayList<Lecturer> lecturers = new ArrayList<>();
     private ArrayList<Group> groups = new ArrayList<>();
     private  ArrayList<Lecture> lectures = new ArrayList<>();
+    private String name, description;
+
 
 
 
@@ -60,19 +63,24 @@ public class GroupDetailsActivity extends AppCompatActivity implements View.OnCl
         TextView tvDescription = findViewById(R.id.tvGroupDescription);
 
         groupId = getIntent().getStringExtra("groupId");
-        String name = getIntent().getStringExtra("groupName");
-        String description = getIntent().getStringExtra("groupDescription");
+        name = getIntent().getStringExtra("groupName");
+        description = getIntent().getStringExtra("groupDescription");
 
         tvName.setText(name);
         tvDescription.setText(description);
 
+        tvName.setOnLongClickListener(this);
+        tvDescription.setOnLongClickListener(this);
+
+
       fabAddLecture = findViewById(R.id.fabAddLecture);
       fabAddLecture.setOnClickListener(this);
 
+        groupRef = FirebaseDatabase.getInstance(DB_URL).getReference("groups").child(groupId);
+        groupsRef = FirebaseDatabase.getInstance(DB_URL).getReference("groups");
+        lecturersRef = FirebaseDatabase.getInstance(DB_URL).getReference("lecturers");
 
-        lecturerRef = FirebaseDatabase.getInstance().getReference("lecturers");
-
-        lecturerRef.get()
+        lecturersRef.get()
                 .addOnSuccessListener(new OnSuccessListener<DataSnapshot>() {
                     @Override
                     public void onSuccess(DataSnapshot snapshot) {
@@ -100,7 +108,6 @@ public class GroupDetailsActivity extends AppCompatActivity implements View.OnCl
                 });
 
 
-        groupRef = FirebaseDatabase.getInstance().getReference("groups").child(groupId);
         groupRef.get()
                 .addOnSuccessListener(new OnSuccessListener<DataSnapshot>() {
                     @Override
@@ -118,12 +125,8 @@ public class GroupDetailsActivity extends AppCompatActivity implements View.OnCl
                                     Toast.LENGTH_LONG).show();
                         });
 
-        // TODO display group details
-        //TODO display rcLectures
 
         //this is the lectures that fit to the group id
-        lectureRef = FirebaseDatabase.getInstance().getReference("lectures");
-        loadGroupLectures();
 
         adapter = new LecturesAdapter(this,
                 lectures,
@@ -141,8 +144,11 @@ public class GroupDetailsActivity extends AppCompatActivity implements View.OnCl
                         handleLectureLongClick(lecture);
                     }
                 },
-        groupRef,
-                lectureRef);
+        groupsRef,
+                lecturersRef);
+
+        lectureRef = FirebaseDatabase.getInstance(DB_URL).getReference("lectures");
+        loadGroupLectures();
 
         RecyclerView rvLectures = findViewById(R.id.rvLectures);
         rvLectures.setLayoutManager(new LinearLayoutManager(this));
@@ -172,7 +178,7 @@ public class GroupDetailsActivity extends AppCompatActivity implements View.OnCl
                 })
                 .addOnFailureListener(e -> {
                     Toast.makeText(GroupDetailsActivity.this,
-                            "שגיאה בטעינת ההרצאות",
+                             "שגיאה:" + e.getMessage(),
                             Toast.LENGTH_LONG).show();
                 });
     }
@@ -212,6 +218,10 @@ public class GroupDetailsActivity extends AppCompatActivity implements View.OnCl
     private void handleLectureClick(Lecture lecture) {
         Intent intent = new Intent(this, LectureDetailsActivity.class);
         intent.putExtra("lectureId", lecture.getLectureId());
+        intent.putExtra("lecturerId", lecture.getLecturerId());
+        intent.putExtra("groupId", lecture.getGroupId());
+        intent.putExtra("lectureTitle", lecture.getTitle());
+        intent.putExtra("lectureDate", lecture.getDate().getTime());
         startActivity(intent);
     }
     @Override
@@ -229,11 +239,6 @@ public class GroupDetailsActivity extends AppCompatActivity implements View.OnCl
         View view = LayoutInflater.from(this)
                 .inflate(R.layout.dialog_add_lecture, null);
         builder.setView(view);
-
-        Toast.makeText(this,
-                 " lecturers: " + lecturers.size(),
-                Toast.LENGTH_LONG).show();
-
 
         spLectureGroup = view.findViewById(R.id.spLectureGroup);
         spLecturerName = view.findViewById(R.id.spLecturerName);
@@ -313,7 +318,7 @@ public class GroupDetailsActivity extends AppCompatActivity implements View.OnCl
 
         long timestamp = selectedDateTime.getTimeInMillis();
 
-        String lectureId = FirebaseDatabase.getInstance()
+        String lectureId = FirebaseDatabase.getInstance(DB_URL)
                 .getReference("lectures")
                 .push()
                 .getKey();
@@ -329,7 +334,7 @@ public class GroupDetailsActivity extends AppCompatActivity implements View.OnCl
 
         lecture.setDate(new Date(timestamp));
 
-        FirebaseDatabase.getInstance()
+        FirebaseDatabase.getInstance(DB_URL)
                 .getReference("lectures")
                 .child(lectureId)
                 .setValue(lecture)
@@ -391,5 +396,83 @@ public class GroupDetailsActivity extends AppCompatActivity implements View.OnCl
                 new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault());
 
         etLectureDate.setText(sdf.format(selectedDateTime.getTime()));
+    }
+//when long press edit or delete group
+    @Override
+    public boolean onLongClick(View v) {
+        if (v.getId() == R.id.tvGroupName || v.getId() == R.id.tvGroupDescription){
+
+                android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
+                View view = LayoutInflater.from(this)
+                        .inflate(R.layout.dialog_add_group, null);
+                builder.setView(view);
+
+                final EditText etName = view.findViewById(R.id.etGroupName);
+                final EditText etDescription = view.findViewById(R.id.etGroupDescription);
+                Button btnSave = view.findViewById(R.id.btnAddGroup);
+                Button btnDelete = view.findViewById(R.id.btnDelete);
+
+                etName.setText(name);
+                etDescription.setText(description);
+                btnSave.setText("שמור");
+                btnDelete.setText("מחק");
+
+                final android.app.AlertDialog dialog = builder.create();
+                dialog.show();
+
+                btnSave.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        String newName = etName.getText().toString().trim();
+                        String newDesc = etDescription.getText().toString().trim();
+
+                        if (newName.isEmpty() || newDesc.isEmpty()) {
+                            Toast.makeText(GroupDetailsActivity.this, "נא למלא את כל השדות", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+
+                        Map<String, Object> updates = new HashMap<>();
+                        updates.put("name", newName);
+                        updates.put("description", newDesc);
+
+                        groupsRef.child(groupId).updateChildren(updates)
+                                .addOnSuccessListener(new com.google.android.gms.tasks.OnSuccessListener<Void>() {
+                                    @Override
+                                    public void onSuccess(Void aVoid) {
+                                        Toast.makeText(GroupDetailsActivity.this, "קבוצה עודכנה", Toast.LENGTH_SHORT).show();
+
+                                    }
+                                })
+                                .addOnFailureListener(new com.google.android.gms.tasks.OnFailureListener() {
+                                    @Override
+                                    public void onFailure(@NonNull Exception e) {
+                                        Toast.makeText(GroupDetailsActivity.this, "שגיאה בעדכון: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                                    }
+                                });
+                        dialog.dismiss();
+                    }
+                });
+
+            btnDelete.setOnClickListener(v1 -> {
+                groupsRef.child(groupId).removeValue()
+                        .addOnSuccessListener(new com.google.android.gms.tasks.OnSuccessListener<Void>() {
+                            @Override
+                            public void onSuccess(Void aVoid) {
+                                Toast.makeText(GroupDetailsActivity.this, "קבוצה נמחקה", Toast.LENGTH_SHORT).show();
+                                // ה-SnapshotListener ב-Activity יעדכן את הרשימה אוטומטית
+                            }
+                        })
+                        .addOnFailureListener(new com.google.android.gms.tasks.OnFailureListener() {
+                            @Override
+                            public void onFailure(@NonNull Exception e) {
+                                Toast.makeText(GroupDetailsActivity.this, "שגיאה במחיקה: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                            }
+                        });
+                dialog.dismiss();
+            });
+
+        }
+
+        return false;
     }
 }

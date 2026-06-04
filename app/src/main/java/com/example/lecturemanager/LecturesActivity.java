@@ -38,6 +38,7 @@ import java.util.Locale;
 
 public class LecturesActivity extends AppCompatActivity implements View.OnClickListener {
 
+    private final static String DB_URL = "https://lecture-manager-356ad-default-rtdb.europe-west1.firebasedatabase.app/";
     private RecyclerView rvLectures;
     private FloatingActionButton fabAddLecture;
     DatabaseReference groupsRef , lecturersRef;
@@ -56,6 +57,7 @@ public class LecturesActivity extends AppCompatActivity implements View.OnClickL
     private ArrayList<Lecturer> lecturers = new ArrayList<>();
     private boolean groupsLoaded = false;
     private boolean lecturersLoaded = false;
+    private static final FirebaseDatabase dbref = FirebaseDatabase.getInstance(DB_URL);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -70,9 +72,9 @@ public class LecturesActivity extends AppCompatActivity implements View.OnClickL
         toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        lecturesRef = FirebaseDatabase.getInstance().getReference("lectures");
-        groupsRef = FirebaseDatabase.getInstance().getReference("groups");
-        lecturersRef = FirebaseDatabase.getInstance().getReference("lecturers");
+        lecturesRef = dbref.getReference("lectures");
+        groupsRef = dbref.getReference("groups");
+        lecturersRef = dbref.getReference("lecturers");
 
         rvLectures = findViewById(R.id.rvLectures);
         rvLectures.setLayoutManager(new LinearLayoutManager(this));
@@ -85,12 +87,11 @@ public class LecturesActivity extends AppCompatActivity implements View.OnClickL
 
 
 
-
         adapter = new LecturesAdapter(this, lectures,
                 new LecturesAdapter.OnLectureClickListener() {
                     @Override
                     public void onLectureClick(Lecture lecture) {
-                        openLectureDeatails(lecture);                    }
+                        openLectureDetails(lecture);                    }
                 },
                 new LecturesAdapter.OnLectureLongClickListener() {
                     @Override
@@ -173,12 +174,14 @@ public class LecturesActivity extends AppCompatActivity implements View.OnClickL
 
 
 
-    private void openLectureDeatails(Lecture lecture) {
+    private void openLectureDetails(Lecture lecture) {
+        long date = lecture.getDate().getTime();
+
         Intent intent = new Intent(this, LectureDetailsActivity.class)
                 .putExtra("lecturerId",lecture.getLecturerId())
                 .putExtra("groupId",lecture.getGroupId())
                 .putExtra("lectureTitle",lecture.getTitle())
-                .putExtra("lectureDate", lecture.getDate())
+                .putExtra("lectureDate", date)
                 .putExtra("lectureId",lecture.getLectureId());
         startActivity(intent);
     }
@@ -223,6 +226,7 @@ public class LecturesActivity extends AppCompatActivity implements View.OnClickL
             showAddLectureDialog();
         }
             else if(v.getId() == R.id.btnAddLecture){
+            Toast.makeText(this, "btnAddLecture pressed", Toast.LENGTH_SHORT).show();
                handleAddLecture();
             }
     }
@@ -301,9 +305,8 @@ public class LecturesActivity extends AppCompatActivity implements View.OnClickL
         Group selectedGroup = groups.get(groupPosition);
         Lecturer selectedLecturer = lecturers.get(lecturerPosition);
 
-        long timestamp = selectedDateTime.getTimeInMillis();
 
-        String lectureId = FirebaseDatabase.getInstance()
+        String lectureId = FirebaseDatabase.getInstance(DB_URL)
                 .getReference("lectures")
                 .push()
                 .getKey();
@@ -316,9 +319,10 @@ public class LecturesActivity extends AppCompatActivity implements View.OnClickL
         lecture.setGroupId(selectedGroup.getId());
         lecture.setLecturerId(selectedLecturer.getId());
 
+        long timestamp = selectedDateTime.getTimeInMillis();
         lecture.setDate(new Date(timestamp));
 
-        FirebaseDatabase.getInstance()
+        FirebaseDatabase.getInstance(DB_URL)
                 .getReference("lectures")
                 .child(lectureId)
                 .setValue(lecture)
@@ -331,6 +335,7 @@ public class LecturesActivity extends AppCompatActivity implements View.OnClickL
                 });
     }
     private void showEditLectureDialog(Lecture lecture) {
+        //TODO do the method
     }
     private void showDateTimePicker() {
 

@@ -39,6 +39,8 @@ public class LecturesAdapter
     public interface OnLectureLongClickListener {
         void onLectureLongClick(Lecture lecture);
     }
+
+
     public LecturesAdapter(Context context,
                             ArrayList<Lecture> lectures,
                            OnLectureClickListener clickListener,
